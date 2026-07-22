@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI English Conversation Assistant — Real-Time Reply Generator</title>
+    <meta name="description" content="AI-powered English conversation assistant that listens to your client in real-time, transcribes speech, and generates professional replies.">
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #1e1e32;
+            --text-primary: #e8e8ed;
+            --text-secondary: #9b9bb0;
+            --accent: #6c5ce7;
+            --accent-light: #a29bfe;
+            --success: #00cec9;
+            --danger: #ff6b6b;
+            --warning: #feca57;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius: 12px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 30px 0 20px;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--danger);
+            transition: background 0.3s;
+        }
+
+        .status-dot.active {
+            background: var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-light);
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: #0f0f1a;
+        }
+
+        .btn-success:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: #0f0f1a;
+        }
+
+        .btn-warning:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Live Transcription */
+        .live-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--accent-light);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .live-text {
+            min-height: 60px;
+            padding: 16px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .live-text.listening {
+            border-color: var(--success);
+            box-shadow: 0 0 10px rgba(0, 206, 201, 0.15);
+        }
+
+        .live-text .placeholder {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Reply Section */
+        .reply-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .reply-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .reply-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px rgba(108, 92, 231, 0.15);
+        }
+
+        .reply-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Conversation History */
+        .history-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .history-list::-webkit-scrollbar-track {
+            background: var(--bg-card);
+            border-radius: 3px;
+        }
+
+        .history-list::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 3px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+
+        .message-client {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            margin-right: auto;
+        }
+
+        .message-user {
+            background: rgba(108, 92, 231, 0.15);
+            border: 1px solid rgba(108, 92, 231, 0.3);
+            margin-left: auto;
+        }
+
+        .message-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .message-client .message-label {
+            color: var(--success);
+        }
+
+        .message-user .message-label {
+            color: var(--accent-light);
+        }
+
+        .message-text {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .empty-history {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--success);
+            border-radius: 8px;
+            color: var(--success);
+            font-size: 0.9rem;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Browser Support Warning */
+        .warning-banner {
+            background: rgba(254, 202, 87, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            color: var(--warning);
+            text-align: center;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+            }
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn {
+                justify-content: center;
+            }
+            .message {
+                max-width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎙️ AI English Conversation Assistant</h1>
+            <p>Real-Time Reply Generator — Listen, Transcribe & Respond Professionally</p>
+        </div>
+
+        <!-- Browser Support Warning -->
+        <div class="warning-banner" id="warningBanner">
+            ⚠️ Your browser does not support the Web Speech Recognition API. Please use Google Chrome or Microsoft Edge for full functionality.
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-dot" id="statusDot"></div>
+            <span class="status-text" id="statusText">Ready — Click "Start Listening" to begin</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn btn-primary" id="btnStart" onclick="startListening()">
+                🎤 Start Listening
+            </button>
+            <button class="btn btn-danger" id="btnStop" onclick="stopListening()" disabled>
+                ⏹️ Stop Listening
+            </button>
+            <button class="btn btn-warning" id="btnClear" onclick="clearHistory()">
+                🗑️ Clear History
+            </button>
+        </div>
+
+        <!-- Live Transcription -->
+        <div class="live-section">
+            <div class="section-title">
+                <span>📡</span> Live Client Speech
+            </div>
+            <div class="live-text" id="liveText">
+                <span class="placeholder">Client's speech will appear here in real-time...</span>
+            </div>
+        </div>
+
+        <!-- AI Reply Section -->
+        <div class="reply-section">
+            <div class="section-title">
+                <span>🤖</span> AI Suggested Reply
+            </div>
+            <textarea class="reply-textarea" id="replyText" placeholder="AI-generated reply will appear here. You can edit it before sending..."></textarea>
+            <div class="reply-actions">
+                <button class="btn btn-success" id="btnCopy" onclick="copyReply()" disabled>
+                    📋 Copy to Clipboard
+                </button>
+                <button class="btn btn-primary" id="btnSpeak" onclick="speakReply()" disabled>
+                    🔊 Speak Reply
+                </button>
+                <button class="btn btn-danger" id="btnStopSpeak" onclick="stopSpeaking()" style="display:none;">
+                    🔇 Stop Speaking
+                </button>
+            </div>
+        </div>
+
+        <!-- Conversation History -->
+        <div class="history-section">
+            <div class="section-title">
+                <span>💬</span> Conversation History
+            </div>
+            <div class="history-list" id="historyList">
+                <div class="empty-history">No conversation yet. Start listening to begin...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ============================================
+        // State
+        // ============================================
+        let recognition = null;
+        let isListening = false;
+        let conversationHistory = [];
+        let currentTranscript = '';
+        let synth = window.speechSynthesis;
+
+        // ============================================
+        // Initialize Speech Recognition
+        // ============================================
+        function initRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!SpeechRecognition) {
+                document.getElementById('warningBanner').style.display = 'block';
+                document.getElementById('btnStart').disabled = true;
+                return false;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = handleResult;
+            recognition.onerror = handleError;
+            recognition.onend = handleEnd;
+
+            return true;
+        }
+
+        // ============================================
+        // Speech Recognition Handlers
+        // ============================================
+        function handleResult(event) {
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+
+            // Update live display
+            const liveEl = document.getElementById('liveText');
+            if (finalTranscript) {
+                currentTranscript += finalTranscript;
+                liveEl.textContent = currentTranscript + interimTranscript;
+            } else {
+                liveEl.textContent = currentTranscript + interimTranscript;
+            }
+
+            // When we get a final result with a pause, process it
+            if (finalTranscript) {
+                // Use a debounce to wait for the speaker to finish their thought
+                clearTimeout(window.processTimeout);
+                window.processTimeout = setTimeout(() => {
+                    if (currentTranscript.trim()) {
+                        processClientSpeech(currentTranscript.trim());
+                        currentTranscript = '';
+                    }
+                }, 2000);
+            }
+        }
+
+        function handleError(event) {
+            console.error('Speech recognition error:', event.error);
+            if (event.error === 'not-allowed') {
+                showToast('Microphone access denied. Please allow microphone permissions.');
+                stopListening();
+            } else if (event.error !== 'no-speech') {
+                showToast('Recognition error: ' + event.error);
+            }
+        }
+
+        function handleEnd() {
+            // Auto-restart if still supposed to be listening
+            if (isListening) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    // Ignore if already started
+                }
+            }
+        }
+
+        // ============================================
+        // Controls
+        // ============================================
+        function startListening() {
+            if (!recognition && !initRecognition()) return;
+
+            try {
+                recognition.start();
+                isListening = true;
+                currentTranscript = '';
+
+                document.getElementById('btnStart').disabled = true;
+                document.getElementById('btnStop').disabled = false;
+                document.getElementById('statusDot').classList.add('active');
+                document.getElementById('statusText').textContent = 'Listening... Speak now';
+                document.getElementById('liveText').classList.add('listening');
+                document.getElementById('liveText').innerHTML = '<span class="placeholder">Listening for client speech...</span>';
+
+                showToast('🎤 Listening started');
+            } catch (e) {
+                showToast('Error starting recognition: ' + e.message);
+            }
+        }
+
+        function stopListening() {
+            if (recognition) {
+                recognition.stop();
+            }
+            isListening = false;
+
+            // Process any remaining transcript
+            if (currentTranscript.trim()) {
+                processClientSpeech(currentTranscript.trim());
+                currentTranscript = '';
+            }
+
+            document.getElementById('btnStart').disabled = false;
+            document.getElementById('btnStop').disabled = true;
+            document.getElementById('statusDot').classList.remove('active');
+            document.getElementById('statusText').textContent = 'Stopped — Click "Start Listening" to resume';
+            document.getElementById('liveText').classList.remove('listening');
+
+            showToast('⏹️ Listening stopped');
+        }
+
+        // ============================================
+        // Process Client Speech & Generate Reply
+        // ============================================
+        function processClientSpeech(text) {
+            // Add to conversation history
+            addToHistory('client', text);
+
+            // Generate AI reply (mock for now)
+            const reply = generateMockReply(text);
+
+            // Show in reply textarea
+            document.getElementById('replyText').value = reply;
+            document.getElementById('btnCopy').disabled = false;
+            document.getElementById('btnSpeak').disabled = false;
+
+            // Reset live text
+            document.getElementById('liveText').innerHTML = '<span class="placeholder">Listening for more speech...</span>';
+        }
+
+        function generateMockReply(clientText) {
+            // Mock AI reply generation — professional, formal English
+            const lowerText = clientText.toLowerCase();
+
+            if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey')) {
+                return "Hello! Thank you for reaching out. How may I assist you today? I'm happy to help with any questions or concerns you might have.";
+            }
+
+            if (lowerText.includes('how are you') || lowerText.includes('how do you do')) {
+                return "I'm doing well, thank you for asking. I appreciate your courtesy. How can I be of service to you today?";
+            }
+
+            if (lowerText.includes('price') || lowerText.includes('cost') || lowerText.includes('budget') || lowerText.includes('rate')) {
+                return "Thank you for inquiring about the pricing. I'd be happy to provide you with a detailed quote based on your specific requirements. Could you please share more details about the scope of the project so I can give you an accurate estimate?";
+            }
+
+            if (lowerText.includes('deadline') || lowerText.includes('timeline') || lowerText.includes('when') || lowerText.includes('delivery')) {
+                return "Regarding the timeline, I understand the importance of meeting deadlines. Based on the project scope, I can provide a realistic delivery estimate. Would you like me to break down the timeline into milestones for better tracking?";
+            }
+
+            if (lowerText.includes('problem') || lowerText.includes('issue') || lowerText.includes('bug') || lowerText.includes('error')) {
+                return "I understand there's an issue that needs to be addressed. I'll investigate this thoroughly and provide you with a resolution as quickly as possible. Could you share any additional details that might help me diagnose the problem?";
+            }
+
+            if (lowerText.includes('thank') || lowerText.includes('thanks') || lowerText.includes('appreciate')) {
+                return "You're most welcome! I'm glad I could be of help. Please don't hesitate to reach out if you need any further assistance. I'm always here to support you.";
+            }
+
+            if (lowerText.includes('meeting') || lowerText.includes('call') || lowerText.includes('schedule')) {
+                return "I'd be happy to schedule a meeting at your convenience. Could you please suggest a few time slots that work for you? I'll do my best to accommodate your preferred timing.";
+            }
+
+            if (lowerText.includes('update') || lowerText.includes('progress') || lowerText.includes('status')) {
+                return "Absolutely, I'll provide you with a comprehensive progress update. The work is proceeding well and on track. Let me compile the details and share a status report with you shortly.";
+            }
+
+            // Default professional response
+            return `Thank you for sharing that. I've noted your point regarding "${clientText.substring(0, 50)}${clientText.length > 50 ? '...' : ''}". I'll review this carefully and provide you with a thoughtful response. Is there anything specific you'd like me to focus on?`;
+        }
+
+        // ============================================
+        // Reply Actions
+        // ============================================
+        function copyReply() {
+            const reply = document.getElementById('replyText').value;
+            if (!reply) return;
+
+            navigator.clipboard.writeText(reply).then(() => {
+                showToast('📋 Reply copied to clipboard!');
+                addToHistory('user', reply);
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.getElementById('replyText');
+                textarea.select();
+                document.execCommand('copy');
+                showToast('📋 Reply copied to clipboard!');
+                addToHistory('user', reply);
+            });
+        }
+
+        function speakReply() {
+            const reply = document.getElementById('replyText').value;
+            if (!reply || !synth) return;
+
+            // Stop any ongoing speech
+            synth.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(reply);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+
+            // Try to use a natural-sounding voice
+            const voices = synth.getVoices();
+            const preferredVoice = voices.find(v =>
+                v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural'))
+            ) || voices.find(v => v.lang.startsWith('en'));
+
+            if (preferredVoice) {
+                utterance.voice = preferredVoice;
+            }
+
+            utterance.onstart = () => {
+                document.getElementById('btnSpeak').style.display = 'none';
+                document.getElementById('btnStopSpeak').style.display = 'flex';
+            };
+
+            utterance.onend = () => {
+                document.getElementById('btnSpeak').style.display = 'flex';
+                document.getElementById('btnStopSpeak').style.display = 'none';
+                addToHistory('user', reply);
+            };
+
+            synth.speak(utterance);
+            showToast('🔊 Speaking reply...');
+        }
+
+        function stopSpeaking() {
+            if (synth) {
+                synth.cancel();
+            }
+            document.getElementById('btnSpeak').style.display = 'flex';
+            document.getElementById('btnStopSpeak').style.display = 'none';
+            showToast('🔇 Speech stopped');
+        }
+
+        // ============================================
+        // Conversation History
+        // ============================================
+        function addToHistory(role, text) {
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            conversationHistory.push({ role, text, timestamp });
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const historyEl = document.getElementById('historyList');
+
+            if (conversationHistory.length === 0) {
+                historyEl.innerHTML = '<div class="empty-history">No conversation yet. Start listening to begin...</div>';
+                return;
+            }
+
+            historyEl.innerHTML = conversationHistory.map(msg => `
+                <div class="message message-${msg.role}">
+                    <div class="message-label">${msg.role === 'client' ? '🗣️ Client' : '💬 You'}</div>
+                    <div class="message-text">${escapeHtml(msg.text)}</div>
+                    <div class="message-time">${msg.timestamp}</div>
+                </div>
+            `).join('');
+
+            // Auto-scroll to bottom
+            historyEl.scrollTop = historyEl.scrollHeight;
+        }
+
+        function clearHistory() {
+            conversationHistory = [];
+            renderHistory();
+            document.getElementById('replyText').value = '';
+            document.getElementById('btnCopy').disabled = true;
+            document.getElementById('btnSpeak').disabled = true;
+            document.getElementById('liveText').innerHTML = '<span class="placeholder">Client\'s speech will appear here in real-time...</span>';
+            showToast('🗑️ History cleared');
+        }
+
+        // ============================================
+        // Utilities
+        // ============================================
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // ============================================
+        // Initialize
+        // ============================================
+        window.addEventListener('load', () => {
+            initRecognition();
+
+            // Pre-load voices for TTS
+            if (synth) {
+                synth.getVoices();
+                speechSynthesis.onvoiceschanged = () => synth.getVoices();
+            }
+        });
+    </script>
+</body>
+</html>
